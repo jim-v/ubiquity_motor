@@ -36,6 +36,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "hardware_interface/robot_hw.h"
 #include "ros/ros.h"
 #include "sensor_msgs/JointState.h"
+#include "tf2_ros/transform_broadcaster.h"
+
 
 #include "std_msgs/Int32.h"
 #include "std_msgs/UInt32.h"
@@ -168,6 +170,7 @@ private:
     int32_t prevLeftTicks, prevRightTicks;
     double odomX, odomY, odomTheta;
     ros::Publisher odomPub;
+    tf2_ros::TransformBroadcaster broadcaster;
 
     FRIEND_TEST(MotorHardwareTests, nonZeroWriteSpeedsOutputs);
     FRIEND_TEST(MotorHardwareTests, odomUpdatesPosition);

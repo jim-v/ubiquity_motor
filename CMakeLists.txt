@@ -10,6 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
 	roscpp 
 	geometry_msgs  
 	std_msgs  
+	tf2_ros
 	nav_msgs 
 	serial 
 	hardware_interface 

@@ -144,17 +144,24 @@ void MotorHardware::publishOdom(ros::Time& currentTime, ros::Duration& period) {
     msg.child_frame_id = "base_footprint";
     msg.header.stamp = currentTime;
     msg.header.frame_id = "odom";
-
     msg.pose.pose.position.x = odomX;
     msg.pose.pose.position.y = odomY;
     tf2::Quaternion q(tf2::Vector3(0, 0, 1), odomTheta);
     msg.pose.pose.orientation = tf2::toMsg(q);
-
     msg.twist.twist.linear.x = linearDelta / elapsedTime;
     msg.twist.twist.angular.z = rotationDelta / elapsedTime;
-
     odomPub.publish(msg);
+
+    geometry_msgs::TransformStamped transform;
+    transform.child_frame_id = "base_footprint";
+    transform.header.stamp = currentTime;
+    transform.header.frame_id = "odom";
+    transform.transform.translation.x = odomX;
+    transform.transform.translation.y = odomY;
+    transform.transform.rotation = tf2::toMsg(q);
+    broadcaster.sendTransform(transform);
 }
+
 
 MotorHardware::~MotorHardware() { delete motor_serial_; }
 
