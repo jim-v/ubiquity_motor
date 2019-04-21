@@ -101,6 +101,59 @@ MotorHardware::MotorHardware(ros::NodeHandle nh, CommsParams serial_params,
     diag_updater.add("Limits", &motor_diag_, &MotorDiagnostics::limit_status);
     diag_updater.add("Battery", &motor_diag_, &MotorDiagnostics::battery_status);
     diag_updater.add("MotorPower", &motor_diag_, &MotorDiagnostics::motor_power_status);
+
+    leftTicks = 0;
+    rightTicks = 0;
+    prevLeftTicks = 0;
+    prevRightTicks = 0;
+    odomX = 0.0;
+    odomY = 0.0;
+    odomTheta = 0.0;
+    odomPub = nh.advertise<nav_msgs::Odometry>("/odom2", 1);
+}
+
+void MotorHardware::updateOdom(int32_t leftOdom, int32_t rightOdom) {
+    tickMutex.lock();
+    leftTicks += leftOdom;
+    rightTicks += rightOdom;
+    tickMutex.unlock();
+}
+
+void MotorHardware::publishOdom(ros::Time& currentTime, ros::Duration& period) {
+    // determined empirically on blue
+    const double ticksPerMeter = 206.4;
+    const double ticksPerRadian = 212.0 / M_PI;
+
+    int32_t leftDelta = 0;
+    int32_t rightDelta = 0;
+    tickMutex.lock();
+    leftDelta = leftTicks - prevLeftTicks;
+    rightDelta = rightTicks - prevRightTicks;
+    prevLeftTicks = leftTicks;
+    prevRightTicks = rightTicks;
+    tickMutex.unlock();
+
+    double elapsedTime = period.toSec();
+    double linearDelta = (double)(leftDelta + rightDelta) / (2.0 * ticksPerMeter);
+    double rotationDelta = (double)(rightDelta - leftDelta) / ticksPerRadian;
+    odomTheta += rotationDelta;
+    odomX += cos(odomTheta)*linearDelta;
+    odomY += sin(odomTheta)*linearDelta;
+
+    nav_msgs::Odometry msg;
+    msg.child_frame_id = "base_footprint";
+    msg.header.stamp = currentTime;
+    msg.header.frame_id = "odom";
+
+    msg.pose.pose.position.x = odomX;
+    msg.pose.pose.position.y = odomY;
+    tf2::Quaternion q(tf2::Vector3(0, 0, 1), odomTheta);
+    msg.pose.pose.orientation = tf2::toMsg(q);
+
+    msg.twist.twist.linear.x = linearDelta / elapsedTime;
+    msg.twist.twist.angular.z = rotationDelta / elapsedTime;
+
+    odomPub.publish(msg);
 }
 
 MotorHardware::~MotorHardware() { delete motor_serial_; }
@@ -140,6 +193,7 @@ void MotorHardware::readInputs() {
                     int16_t odomLeft = (odom >> 16) & 0xffff;
                     int16_t odomRight = odom & 0xffff;
                     // ROS_ERROR("left %d right %d", odomLeft, odomRight);
+                    updateOdom(odomLeft, odomRight);
 
                     joints_[0].position += (odomLeft / TICS_PER_RADIAN);
                     joints_[1].position += (odomRight / TICS_PER_RADIAN);

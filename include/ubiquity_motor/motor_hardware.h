@@ -41,6 +41,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "std_msgs/UInt32.h"
 #include "std_msgs/Bool.h"
 #include "sensor_msgs/BatteryState.h"
+#include "nav_msgs/Odometry.h"
+#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 
 #include <diagnostic_updater/update_functions.h>
 #include <diagnostic_updater/diagnostic_updater.h>
@@ -119,6 +121,10 @@ public:
     int max_pwm;
 
     diagnostic_updater::Updater diag_updater;
+
+    void updateOdom(int32_t leftTicks, int32_t rightTicks);
+    void publishOdom(ros::Time& currentTime, ros::Duration& period);
+
 private:
     void _addOdometryRequest(std::vector<MotorMessage>& commands) const;
     void _addVelocityRequest(std::vector<MotorMessage>& commands) const;
@@ -156,6 +162,12 @@ private:
     MotorSerial* motor_serial_;
 
     MotorDiagnostics motor_diag_;
+
+    std::mutex tickMutex;
+    int64_t leftTicks, rightTicks;
+    int32_t prevLeftTicks, prevRightTicks;
+    double odomX, odomY, odomTheta;
+    ros::Publisher odomPub;
 
     FRIEND_TEST(MotorHardwareTests, nonZeroWriteSpeedsOutputs);
     FRIEND_TEST(MotorHardwareTests, odomUpdatesPosition);

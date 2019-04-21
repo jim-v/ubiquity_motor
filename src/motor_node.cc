@@ -171,6 +171,7 @@ int main(int argc, char* argv[]) {
         elapsed = current_time - last_time;
         last_time = current_time;
         robot->readInputs();
+        robot->publishOdom(current_time, elapsed);
         float elapsedSecs = elapsed.toSec();
         if (minCycleTime < elapsedSecs && elapsedSecs < maxCycleTime) {
             cm.update(current_time, elapsed);
